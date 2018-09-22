@@ -24,6 +24,10 @@ int get_total_strength(Player player);
 
 int turns_to_kill(Player player, Monster monster);
 
+int get_play_speed(Player player);
+
+int time_to_next_move(Player player);
+
 string get_random_stance();
 
 string get_weakness(string stance);

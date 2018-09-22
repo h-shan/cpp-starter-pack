@@ -37,6 +37,14 @@ int turns_to_kill(Player player, Monster monster) {
   return (health + stat - 1) / stat;
 }
 
+int get_play_speed(Player player) {
+  return 7 - player._speed;
+}
+
+int time_to_next_move(Player player) {
+  return player._movement_counter - player._speed;
+}
+
 string get_random_stance() {
   srand (time(NULL));
   int r = rand() % 3;

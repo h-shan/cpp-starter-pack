@@ -159,7 +159,7 @@ bool will_engage(node_id_t next) {
 
 int main() {
   Strategy strategy;
-  GameStateEngine gameState = GameStateEngine();
+  GameStateEngine gameState;
   int my_player_num = 0;
   
   while(1){
@@ -190,12 +190,12 @@ int main() {
             CURRENT_TARGET_MONSTER = nearestMonsters[rand() % nearestMonsters.size()];
           }
         }
+        if (CURRENT_TARGET_MONSTER._location == )
       } else {
         vector<Monster> nearestMonsters = API->nearest_monsters(SELF._location, 1);
         CURRENT_TARGET_MONSTER = nearestMonsters[rand() % nearestMonsters.size()];
       }
 
-      node_id_t target = get_step_towards_monster(CURRENT_TARGET_MONSTER);
       string stance = set_stance(target);
 
       if (will_engage(target)) {
