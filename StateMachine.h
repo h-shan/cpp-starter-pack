@@ -9,10 +9,10 @@ public enum State{
   PURSUIT
 }
 
-class GameStateEngine{
+class StateMachine{
   public:
-    GameStateEngine();
-    GameStateEngine get_state();
+    StateMachine();
+    State get_state();
     void set_state(State setAs);
 
   private:

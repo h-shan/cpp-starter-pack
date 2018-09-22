@@ -12,7 +12,7 @@
 #include <math.h>
 #include <time.h>
 #include <map>
-#include "GameStateEngine.h"
+#include "StateMachine.h"
 
 using json = nlohmann::json;
 using Player = Game_Api::Player;
@@ -50,7 +50,6 @@ double get_advantage(){
 
 bool should_pursuit(){
   if (get_advantage >= 0.5){
-    gameState.set_state(State.PURSUIT);
     return true;
   }
   return false;
@@ -184,9 +183,21 @@ bool will_engage(node_id_t next) {
   return false;
 }
 
+void update_game_state(){
+  if (SELF._health < 50){
+    stateMachine.set_state(State.HEALING);
+  }
+  else if (should_pursuit()){
+    stateMachine.set_state(State.PURSUIT);
+  }
+  else {
+    stateMachine.set_state(State.STANDARD);
+  }
+}
+
 int main() {
   Strategy strategy;
-  GameStateEngine gameState;
+  StateMachine stateMachine;
   int my_player_num = 0;
   
   while(1){
