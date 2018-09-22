@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "Game_Api.h"
+#include "util.h"
 using json = nlohmann::json;
 using Player = Game_Api::Player;
 using Monster = Game_Api::Monster;
@@ -23,30 +24,14 @@ using DeathEffects = Game_Api::DeathEffects;
 using namespace std;
 //You may add global variables and helper functions
 Game_Api * API;
-Player PLAYER_SELF("", 0, 0, 0, 0, NULL);
+Player SELF("", 0, 0, 0, 0, NULL);
 Player OPPONENT("", 0, 0, 0, 0, NULL);
 map<string, string> WINNER_MAP;
 
-// stance is "Rock", "Paper", or "Scissors"
-double get_stat(Player player, string stance) {
-  if (stance == "Rock") {
-    return player._rock;
-  } else if (stance == "Paper") {
-    return player._paper;
-  } else if (stance == "Scissors") {
-    return player._scissors;
-  }
-  return 0;
-}
-
-double get_strength(Player player) {
-  return player._rock + player._paper + player._scissors;
-}
-
 // return 0 if we have disadvantage, 0.5 - 1 based on sigmoid if we have advantage
 double get_advantage(){
-  int self_health = PLAYER_SELF._health;
-  int self_strength = get_strength(PLAYER_SELF);
+  int self_health = SELF._health;
+  int self_strength = get_strength(SELF);
   int opponent_health = OPPONENT._health;
   int opponent_strength = get_strength(OPPONENT);
   // ratio: how many rounds can we survive
@@ -89,9 +74,9 @@ void log_monsters() {
 int get_remaining_health(Monster monster){
   int monster_health = monster._health;
   int monster_damage = monster._attack;
-  int health = PLAYER_SELF._health;
+  int health = SELF._health;
   string my_stance = WINNER_MAP[monster._stance];
-  int my_damage = get_stat(PLAYER_SELF, my_stance);
+  int my_damage = get_stat(SELF, my_stance);
   while (monster_health > 0){
     monster_health -= my_damage;
     health -= monster_damage;
@@ -99,8 +84,12 @@ int get_remaining_health(Monster monster){
   return health;
 }
 
-vector<node_id_t> get_path(Monster monster) {
-  return API->shortest_paths(PLAYER_SELF._location, node)[0]; 
+vector<node_id_t> get_path(node_id_t node) {
+  return API->shortest_paths(SELF._location, node)[0]; 
+}
+
+vector<node_id_t> get_path(node_id_t source, node_id_t node) {
+  return API->shortest_paths(source, node)[0]; 
 }
 
 vector<Monster> get_speed_monsters() {
@@ -144,10 +133,10 @@ string get_random_stance() {
 
 string set_stance(node_id_t destination) {
   node_id_t node;
-  if (PLAYER_SELF._movement_counter == 1) {
+  if (SELF._movement_counter == 1) {
     node = destination;
   } else {
-    node = PLAYER_SELF._location;
+    node = SELF._location;
   }
   if (API->has_monster(node)) {
     Monster monster = API->get_monster(node);
@@ -158,8 +147,14 @@ string set_stance(node_id_t destination) {
 
 int time_to_target(node_id_t node) {
   vector<node_id_t> path = get_path(node);
-  int player_speed = 7 - PLAYER_SELF._speed;
-  return player_speed * path.size() - (player_speed - PLAYER_SELF._movement_counter);
+  int player_speed = 7 - SELF._speed;
+  return player_speed * path.size() - (player_speed - SELF._movement_counter);
+}
+
+int time_to_target(node_id_t source, node_id_t node) {
+  vector<node_id_t> path = get_path(source, node);
+  int player_speed = 7 - SELF._speed;
+  return player_speed * path.size() - (player_speed - SELF._movement_counter);
 }
 
 node_id_t get_path_player() {
@@ -188,7 +183,7 @@ int main() {
 			API = new Game_Api(my_player_num, data["map"]);
 		} else {
 			API->update(data["game_data"]);
-      PLAYER_SELF = API->get_self();
+      SELF = API->get_self();
 			 //YOUR CODE HERE
       vector <Monster> speedMonsters = get_speed_monsters();
       Monster closestMon = get_closest(speedMonsters);
