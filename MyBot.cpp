@@ -16,17 +16,20 @@ using DeathEffects = Game_Api::DeathEffects;
 #include <string>
 #include <vector>
 #include <climits>
+#include <time.h>
+#include <map>
 
 using namespace std;
 //You may add global variables and helper functions
-Game_Api * api;
+Game_Api * API;
 Player PLAYER_SELF("", 0, 0, 0, 0, NULL);
 Player OPPONENT("", 0, 0, 0, 0, NULL);
+map<string, string> WINNER_MAP;
 
 const int NUM_NODES = 25;
 
 void log_monsters() {
-  vector<Monster> monsters = api->get_all_monsters();
+  vector<Monster> monsters = API->get_all_monsters();
   for (Monster monster : monsters) {
     char msg[1000];
     sprintf(msg, "---------------------------------------\nName: %s\nHealth: %d\nBase health: %d\nStance: %s\n Respawn Counter: %d\n Respawn Rate: %d\n Location: %d\nAttack: %d\nDeath Effects:\nRock: %d\nPaper: %d\nScissors: %d\nSpeed: %d\nHealth: %d",
@@ -44,13 +47,17 @@ void log_monsters() {
       monster._death_effects._speed,
       monster._death_effects._health
       );
-    api->log(string(msg));
+    API->log(string(msg));
   }
-  api->log("NUM_MONSTERS:**************************\n" + to_string(monsters.size()));
+  API->log("NUM_MONSTERS:**************************\n" + to_string(monsters.size()));
+}
+
+vector<node_id_t> get_path(Monster monster) {
+  return API->shortest_paths(PLAYER_SELF._location, monster._location)[0]; 
 }
 
 vector<Monster> get_speed_monsters() {
-  vector <Monster> monsters = api->get_all_monsters();
+  vector <Monster> monsters = API->get_all_monsters();
   vector <Monster> speed_monsters;
   for (Monster monster : monsters){
     if (monster._death_effects._speed > 0){
@@ -64,7 +71,7 @@ Monster get_closest(vector<Monster> monsters) {
   int smallest_length = INT_MAX;
   Monster closest_monster;
   for (Monster monster: monsters) {
-    vector<vector<node_id_t> > paths = api->shortest_paths(PLAYER_SELF._location, monster._location);
+    vector<vector<node_id_t> > paths = API->shortest_paths(PLAYER_SELF._location, monster._location);
     size_t length = paths[0].size();
     if (length < smallest_length) {
       smallest_length = length;
@@ -74,25 +81,57 @@ Monster get_closest(vector<Monster> monsters) {
   return closest_monster;
 }
 
+string get_random_stance() {
+  int r = rand() % 3;
+  switch (r) {
+    case 0:
+      return "Rock";
+    case 1:
+      return "Paper";
+    case 2:
+      return "Scissors";
+    default:
+      return "";
+  }
+}
+
+string set_stance(node_id_t destination) {
+  node_id_t node;
+  if (PLAYER_SELF._movement_counter == 1) {
+    node = destination;
+  } else {
+    node = PLAYER_SELF._location;
+  }
+  if (API->has_monster(node)) {
+    Monster monster = API->get_monster(node);
+    return WINNER_MAP[monster._stance]; 
+  }
+  return get_random_stance();
+}
+
 vector<Monster> get_path_monsters() {
-  vector<vector<node_id_t>> path = api->shortest_paths(PLAYER_SELF._location, monster._location);
-  int time = (7 - PLAYER_SELF._speed) * path.size() - (7 - PLAYER_SELF._movement_counter);
-  return time;
+  vector<vector<node_id_t>> = API->shotest_paths(PLAYER_SELF._location, monster._location);
+  int player_speed = 7 - PLAYER_SELF._speed;
+  return player_speed * vector.size() - (player_speed - PLAYER_SELF._movement_counter);
 }
 
 vector<Monster> get_path_player() {
-  vector<vector<node_id_t>> playerpath = api->shortest_paths(PLAYER_SELF._location, OPPONENT._location);
+  vector<vector<node_id_t>> playerpath = API->shortest_paths(PLAYER_SELF._location, OPPONENT._location);
   return playerpath[0][0];
 
 }
 
 node_it_t get_step_towards_monster(Monster monster) {
-  vector<vector<node_id_t> > paths = api->shortest_paths(PLAYER_SELF._location, monster._location);
+  vector<vector<node_id_t> > paths = API->shortest_paths(PLAYER_SELF._location, monster._location);
   return paths[0][0];
 }
 
 int main() {
-	int my_player_num = 0;
+  srand (time(NULL));
+  WINNER_MAP["Rock"] = "Paper";
+  WINNER_MAP["Scissors"] = "Rock";
+  WINNER_MAP["Paper"] = "Scissors";
+  int my_player_num = 0;
   while(1){
 		char* buf = NULL;
 		size_t size = 0;
@@ -100,15 +139,15 @@ int main() {
 		json data = json::parse(buf);
 		if(data["type"] == "map"){
 			my_player_num = data["player_id"];
-			api = new Game_Api(my_player_num, data["map"]);
+			API = new Game_Api(my_player_num, data["map"]);
 		} else {
-			api->update(data["game_data"]);
-      PLAYER_SELF = api->get_self();
+			API->update(data["game_data"]);
+      PLAYER_SELF = API->get_self();
 			 //YOUR CODE HERE
-      <vector> Monster speedMonsters = get_speed_monsters();
+      vector <Monster> speedMonsters = get_speed_monsters();
       Monster closestMon = get_closest(speedMonsters);
       node_id_t target = get_step_towards_monster(closestMon);
-      api->submit_decision(target, "Rock"); //CHANGE THIS
+      API->submit_decision(target, set_stance(target)); //CHANGE THIS
       fflush(stdout);
       free(buf);
     }
