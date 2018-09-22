@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-using namaespace std;
+using namespace std;
 
 public enum State{
   STANDARD,
@@ -9,11 +9,11 @@ public enum State{
   PURSUIT
 }
 
-class GameStateEngine{
+class StateMachine{
   public:
-    GameStateEngine();
-    GameStateEngine get_state();
-    void set_state(GameStateEngine setAs);
+    StateMachine();
+    State get_state();
+    void set_state(State setAs);
 
   private:
     GameStateEngine _currentState;

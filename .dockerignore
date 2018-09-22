@@ -5,4 +5,5 @@
 !MyBot.*
 !util.*
 !strategy.*
+!StateMachine.*
 MyBot.exe

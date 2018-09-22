@@ -12,7 +12,7 @@
 #include <math.h>
 #include <time.h>
 #include <map>
-#include "GameStateEngine.h"
+#include "StateMachine.h"
 
 using json = nlohmann::json;
 using Player = Game_Api::Player;
@@ -48,7 +48,33 @@ double get_advantage(){
   return sigmoid;
 }
 
+bool should_pursuit(){
+  if (get_advantage >= 0.5){
+    return true;
+  }
+  return false;
+}
 
+node_id_t pursuit(){
+  if (SELF._location == OPPONENT._location){
+    if (time_to_next_move(SELF) <= time_to_next_move(OPPONENT)){
+	    return SELF._location;
+    }
+	} else {
+    if (SELF._destination == SELF._location){
+	    vector<node_id_t> adjacent = API->get_adjacent_nodes(SELF._location);
+	    return adjacent[0];
+    }
+	  return SELF._destination;
+	}
+  
+  vector<vector<node_id_t>> paths = API->shortest_paths(SELF._location, OPPONENT._location);
+  for (vector<node_id_t> path : paths) {
+    if (path[0] == SELF._destination)
+      return path[0];
+  }
+  return paths[0][0];
+}
 
 int get_remaining_health(Monster monster){
   int monster_health = monster._health;
@@ -62,7 +88,7 @@ int get_remaining_health(Monster monster){
   }
   return health;
 }
-
+  
 vector<node_id_t> get_path(node_id_t node) {
   return API->shortest_paths(SELF._location, node)[0]; 
 }
@@ -111,7 +137,7 @@ string set_stance(node_id_t destination) {
 int time_to_target(node_id_t node) {
   vector<node_id_t> path = get_path(node);
   int player_speed = 7 - SELF._speed;
-  int current_progress = path[0] == SELF._desitnation ? time_to_next_move(SELF) : 0;
+  int current_progress = path[0] == SELF._destination ? time_to_next_move(SELF) : 0;
   return player_speed * path.size() - current_progress;
 }
 
@@ -178,9 +204,21 @@ Monster get_closest_monster(bool not_current = false) {
   return closestMonsters[rand() % closestMonsters.size()];
 }
 
+void update_game_state(){
+  if (SELF._health < 50){
+    stateMachine.set_state(State.HEALING);
+  }
+  else if (should_pursuit()){
+    stateMachine.set_state(State.PURSUIT);
+  }
+  else {
+    stateMachine.set_state(State.STANDARD);
+  }
+}
+
 int main() {
   Strategy strategy;
-  GameStateEngine gameState;
+  StateMachine stateMachine;
   int my_player_num = 0;
   
   while(1){
