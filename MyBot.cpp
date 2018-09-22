@@ -80,6 +80,7 @@ Monster get_closest(vector<Monster> monsters) {
   return closest_monster;
 }
 
+<<<<<<< HEAD
 string get_random_stance() {
   int r = rand() % 3;
   switch (r) {
@@ -108,7 +109,13 @@ string set_stance(node_id_t destination) {
   return get_random_stance();
 }
 
-node_id_t get_step_towards_monster(Monster monster) {
+vector<Monster> get_path_monsters() {
+  vector<vector<node_id_t>> = API->shotest_paths(PLAYER_SELF._location, monster._location);
+  int player_speed = 7 - PLAYER_SELF._speed;
+  return player_speed * vector.size() - (player_speed - PLAYER_SELF._movement_counter);
+}
+
+node_it_t get_step_towards_monster(Monster monster) {
   vector<vector<node_id_t> > paths = API->shortest_paths(PLAYER_SELF._location, monster._location);
   return paths[0][0];
 }
