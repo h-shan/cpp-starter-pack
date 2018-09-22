@@ -1,5 +1,4 @@
 #include "strategy.h"
-
 #include <unordered_map>
 
 using namespace std;

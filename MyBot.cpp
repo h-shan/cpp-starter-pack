@@ -155,17 +155,24 @@ Monster get_closest_monster(bool not_current = false) {
   vector<Monster> closestMonsters = API->nearest_monsters(SELF._location, 0);
   vector<node_id_t> adjacent = API->get_adjacent_nodes(SELF._location);
   if (not_current) {
+    int leastTravelTime = 100;
+    Monster bestMonster;
     for (node_id_t node : adjacent) {
       vector<Monster> adjacentMonsters = API->nearest_monsters(node, 0);
       for (Monster monster: adjacentMonsters) {
         if (monster._location == SELF._location) {
           continue;
         }
-        if (!monster._dead || monster._respawn_counter <= time_to_target(monster._location)) {
-          ////fprintf(stderr, "get_closest_monster end*****************\n");
-          return monster;
-        }
+        int travelTime = max(time_to_target(monster._location), monster._dead ? monster._respawn_counter : 0);
+        if (travelTime < leastTravelTime) {
+          leastTravelTime = travelTime;
+          bestMonster = monster;
+        } 
       }  
+    }
+
+    if (bestMonster._name.size()) {
+      return bestMonster;
     }
   }
 
@@ -197,9 +204,9 @@ void update_game_state(){
 void handle_standard(){
   //fprintf(stderr, "Begin standard\n");
   node_id_t target;
-  if (SELF._destination != SELF._location) {
-    target = SELF._destination;
-  } else {
+  // if (SELF._destination != SELF._location) {
+  //   target = SELF._destination;
+  // } else {
     Monster monster = get_closest_monster(true);
     //fprintf(stderr, "Mark 1\n");
     target = monster._location;
@@ -218,7 +225,7 @@ void handle_standard(){
       target = get_step(target);
     }
     //fprintf(stderr, "Mark 3\n");
-  }
+  //}
   string stance = set_stance(target);
     //fprintf(stderr, "Mark 4\n");
 
@@ -266,25 +273,24 @@ void handle_healing() {
   }  else {
     target = get_step(0);
   }
-  if (SELF._location == 0){
-	  if (SELF._destination == 0){
+  if (SELF._location == 0) {
+	  if (SELF._destination == 0) {
 		  int minRespawn = 50;
 		  Monster bestMonster;
 		  vector<int> potentialTargets{1, 6, 10};
 		  for (int potentialTarget : potentialTargets){
-			Monster monster = API->get_monster(potentialTarget);
-			if (monster._respawn_counter < minRespawn){
-				minRespawn = monster._respawn_counter;
-				bestMonster = monster;
-			}
+        Monster monster = API->get_monster(potentialTarget);
+        if (monster._respawn_counter < minRespawn){
+          minRespawn = monster._respawn_counter;
+          bestMonster = monster;
+        }
 		  }
 		
-		int timeToKill = time_to_target(bestMonster._location) + get_play_speed(SELF);
-		int healthRespawn = get_monster(0)._respawn_counter;
-		if (timeToKill < healthRespawn){
-			target = bestMonster._location;
-		}
-		
+      int timeToKill = time_to_target(bestMonster._location) + get_play_speed(SELF);
+      int healthRespawn = API->get_monster(0)._respawn_counter;
+      if (timeToKill < healthRespawn){
+        target = bestMonster._location;
+      }	
 	  } else {
 		  target = SELF._destination;
 	  }

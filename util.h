@@ -18,6 +18,8 @@ using DeathEffects = Game_Api::DeathEffects;
 #include <vector>
 #include <map>
 
+int max(int a, int b);
+
 int get_stat(Player player, string stance);
 
 int get_total_strength(Player player);

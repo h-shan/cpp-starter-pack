@@ -2,6 +2,10 @@
 
 using namespace std;
 
+int max(int a, int b) {
+  return a > b ? a : b;
+}
+
 // stance is "Rock", "Paper", or "Scissors"
 int get_stat(Player player, string stance) {
   if (stance == "Rock") {
