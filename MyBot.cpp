@@ -29,6 +29,20 @@ map<string, string> WINNER_MAP;
 
 const int NUM_NODES = 25;
 
+// stance is "Rock", "Paper", or "Scissors"
+double get_stat(Player player, string stance) {
+  switch (stance) {
+    case "Rock":
+      return player._rock;
+    case "Paper":
+      return player._paper;
+    case "Scissors":
+      return player._scissors;
+    default:
+      throw(1);
+  }
+}
+
 double get_strength(Player player) {
   return player._rock + player._paper + player._scissors;
 }
