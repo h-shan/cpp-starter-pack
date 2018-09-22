@@ -15,15 +15,16 @@ using DeathEffects = Game_Api::DeathEffects;
 #include <iostream>
 #include <string>
 #include <vector>
+#include <climits>
 
 using namespace std;
 //You may add global variables and helper functions
 Game_Api * api;
+Player PLAYER_SELF;
 
 const int NUM_NODES = 25;
 
 void log_monsters() {
-  Player player = api->get_self();
   int num_monsters = 0;
   for (node_id_t i = 0; i < NUM_NODES; i++) {
     if (api->has_monster(i)) {
@@ -51,6 +52,24 @@ void log_monsters() {
   api->log("NUM_MONSTERS:**************************\n" + to_string(num_monsters));
 }
 
+vector<Monster> get_speed_monsters() {
+
+}
+
+Monster get_closest(vector<Monster> monsters) {
+  int smallest_length = INT_MAX;
+  Monster closest_monster;
+  for (Monster monster: monsters) {
+    vector<vector<node_id_t> > paths = api->shortest_paths(PLAYER_SELF->_location, monster->_location);
+    size_t length = paths[0].size();
+    if (length < smallest_length) {
+      smallest_length = length;
+      closest_monster = monster;
+    }
+  }
+  return closest_monster;
+}
+
 int main() {
 	int my_player_num = 0;
 	bool printed = false;
@@ -64,6 +83,7 @@ int main() {
 			api = new Game_Api(my_player_num, data["map"]);
 		} else {
 			api->update(data["game_data"]);
+      PLAYER_SELF = api->get_self();
       if (!printed) {
         log_monsters();
         printed = true;
