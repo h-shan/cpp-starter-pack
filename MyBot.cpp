@@ -254,16 +254,42 @@ void handle_pursuit(){
 
 void handle_healing() {
   node_id_t target;
+  // check if there is a monster at my location and if it is still alive
   if (API->has_monster(SELF._location) && !API->get_monster(SELF._location)._dead) {
+	  		// Check if I will kill the monster in time before next turn. 
     if (turns_to_kill(SELF, API->get_monster(SELF._location)) < time_to_next_move(SELF)) {
-      target = get_step(0);
+			target = get_step(0);
+
     } else {
       target = SELF._location;
     }
-  } else {
+  }  else {
     target = get_step(0);
   }
-
+  if (SELF._location == 0){
+	  if (SELF._destination == 0){
+		  int minRespawn = 50;
+		  Monster bestMonster;
+		  vector<int> potentialTargets{1, 6, 10};
+		  for (int potentialTarget : potentialTargets){
+			Monster monster = API->get_monster(potentialTarget);
+			if (monster._respawn_counter < minRespawn){
+				minRespawn = monster._respawn_counter;
+				bestMonster = monster;
+			}
+		  }
+		
+		int timeToKill = time_to_target(bestMonster._location) + get_play_speed(SELF);
+		int healthRespawn = get_monster(0)._respawn_counter;
+		if (timeToKill < healthRespawn){
+			target = bestMonster._location;
+		}
+		
+	  } else {
+		  target = SELF._destination;
+	  }
+  }
+  
   string stance = set_stance(target);
   if (will_engage(target)) {
     stance = STRATEGY.get_stance(OPPONENT);
