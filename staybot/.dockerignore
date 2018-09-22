@@ -1,0 +1,7 @@
+*
+!includes
+!Game_Api.*
+!Makefile
+!stayBot.*
+!StayBot.*
+MyBot.exe

@@ -27,20 +27,16 @@ Player PLAYER_SELF("", 0, 0, 0, 0, NULL);
 Player OPPONENT("", 0, 0, 0, 0, NULL);
 map<string, string> WINNER_MAP;
 
-const int NUM_NODES = 25;
-
 // stance is "Rock", "Paper", or "Scissors"
 double get_stat(Player player, string stance) {
-  switch (stance) {
-    case "Rock":
-      return player._rock;
-    case "Paper":
-      return player._paper;
-    case "Scissors":
-      return player._scissors;
-    default:
-      throw(1);
+  if (stance == "Rock") {
+    return player._rock;
+  } else if (stance == "Paper") {
+    return player._paper;
+  } else if (stance == "Scissors") {
+    return player._scissors;
   }
+  return 0;
 }
 
 double get_strength(Player player) {
