@@ -86,7 +86,20 @@ void log_monsters() {
   API->log("NUM_MONSTERS:**************************\n" + to_string(monsters.size()));
 }
 
-vector<node_id_t> get_path(node_id_t node) {
+int get_remaining_health(Monster monster){
+  int monster_health = monster._health;
+  int monster_damage = monster._attack;
+  int health = PLAYER_SELF._health;
+  string my_stance = WINNER_MAP[monster._stance];
+  int my_damage = get_stat(PLAYER_SELF, my_stance);
+  while (monster_health > 0){
+    monster_health -= my_damage;
+    health -= monster_damage;
+  }
+  return health;
+}
+
+vector<node_id_t> get_path(Monster monster) {
   return API->shortest_paths(PLAYER_SELF._location, node)[0]; 
 }
 
