@@ -5,16 +5,6 @@
 #include "Game_Api.h"
 #include "util.h"
 #include "strategy.h"
-
-using json = nlohmann::json;
-using Player = Game_Api::Player;
-using Monster = Game_Api::Monster;
-using DeathEffects = Game_Api::DeathEffects;
-
-
-#define RESPONSE_SECS 1
-#define RESPONSE_NSECS 0
-
 #include <iostream>
 #include <string>
 #include <vector>
@@ -22,6 +12,15 @@ using DeathEffects = Game_Api::DeathEffects;
 #include <math.h>
 #include <time.h>
 #include <map>
+#include "GameStateEngine.h"
+
+using json = nlohmann::json;
+using Player = Game_Api::Player;
+using Monster = Game_Api::Monster;
+using DeathEffects = Game_Api::DeathEffects;
+
+#define RESPONSE_SECS 1
+#define RESPONSE_NSECS 0
 
 using namespace std;
 //You may add global variables and helper functions
@@ -49,29 +48,7 @@ double get_advantage(){
   return sigmoid;
 }
 
-void log_monsters() {
-  vector<Monster> monsters = API->get_all_monsters();
-  for (Monster monster : monsters) {
-    char msg[1000];
-    sprintf(msg, "---------------------------------------\nName: %s\nHealth: %d\nBase health: %d\nStance: %s\n Respawn Counter: %d\n Respawn Rate: %d\n Location: %d\nAttack: %d\nDeath Effects:\nRock: %d\nPaper: %d\nScissors: %d\nSpeed: %d\nHealth: %d",
-      monster._name.c_str(),
-      monster._health,
-      monster._base_health,
-      monster._stance.c_str(),
-      monster._respawn_counter,
-      monster._respawn_rate,
-      monster._location,
-      monster._attack,
-      monster._death_effects._rock,
-      monster._death_effects._paper,
-      monster._death_effects._scissors,
-      monster._death_effects._speed,
-      monster._death_effects._health
-      );
-    API->log(string(msg));
-  }
-  API->log("NUM_MONSTERS:**************************\n" + to_string(monsters.size()));
-}
+
 
 int get_remaining_health(Monster monster){
   int monster_health = monster._health;
@@ -181,7 +158,8 @@ bool will_engage(node_id_t next) {
 }
 
 int main() {
-  Strategy strategy;\
+  Strategy strategy;
+  GameStateEngine gameState = GameStateEngine();
   int my_player_num = 0;
   
   while(1){
