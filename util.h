@@ -1,7 +1,6 @@
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef MM_UTIL_H_
+#define MM_UTIL_H_
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
 #include "Game_Api.h"
@@ -21,9 +20,14 @@ using DeathEffects = Game_Api::DeathEffects;
 
 int get_stat(Player player, string stance);
 
-int get_strength(Player player);
+int get_total_strength(Player player);
 
 int turns_to_kill(Player player, Monster monster);
 
+string get_random_stance();
+
+string get_weakness(string stance);
+
+string get_strongest_stat(Player player);
 #endif
 

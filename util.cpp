@@ -14,18 +14,50 @@ int get_stat(Player player, string stance) {
   return 0;
 }
 
-int get_strength(Player player) {
+int get_total_strength(Player player) {
   return player._rock + player._paper + player._scissors;
+}
+
+string get_strongest_stat(Player player) {
+  if (player._rock >= player._scissors && player._rock > player._paper) {
+    return "Rock";
+  }
+  if (player._scissors >= player._rock && player._scissors > player._paper) {
+    return "Scissors";
+  }
+  if (player._scissors >= player._rock && player._scissors > player._paper) {
+    return "Paper";
+  }
+  return get_random_stance();
 }
 
 int turns_to_kill(Player player, Monster monster) {
   int health = monster._health;
+  int stat = get_stat(player, get_weakness(monster._stance));
+  return (health + stat - 1) / stat;
+}
+
+string get_random_stance() {
+  srand (time(NULL));
+  int r = rand() % 3;
+  switch (r) {
+    case 0:
+      return "Rock";
+    case 1:
+      return "Paper";
+    case 2:
+      return "Scissors";
+    default:
+      return "";
+  }
+}
+
+string get_weakness(string stance) {
   map<string, string> winnerMap;
   winnerMap["Scissors"] = "Rock";
   winnerMap["Rock"] = "Paper";
   winnerMap["Paper"] = "Scissors";
-  int stat = get_stat(player, winnerMap[monster._stance]);
-  return (health + stat - 1) / stat;
+  return winnerMap[stance];
 }
 
 

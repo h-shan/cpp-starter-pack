@@ -4,6 +4,8 @@
 #include <time.h>
 #include "Game_Api.h"
 #include "util.h"
+#include "strategy.h"
+
 using json = nlohmann::json;
 using Player = Game_Api::Player;
 using Monster = Game_Api::Monster;
@@ -26,14 +28,13 @@ using namespace std;
 Game_Api * API;
 Player SELF("", 0, 0, 0, 0, NULL);
 Player OPPONENT("", 0, 0, 0, 0, NULL);
-map<string, string> WINNER_MAP;
 
 // return 0 if we have disadvantage, 0.5 - 1 based on sigmoid if we have advantage
 double get_advantage(){
   int self_health = SELF._health;
-  int self_strength = get_strength(SELF);
+  int self_strength = get_total_strength(SELF);
   int opponent_health = OPPONENT._health;
-  int opponent_strength = get_strength(OPPONENT);
+  int opponent_strength = get_total_strength(OPPONENT);
   // ratio: how many rounds can we survive
   double my_rounds = ((double)self_health) / (opponent_strength);
   double opponent_rounds = ((double)opponent_health)/(self_strength);
@@ -75,7 +76,7 @@ int get_remaining_health(Monster monster){
   int monster_health = monster._health;
   int monster_damage = monster._attack;
   int health = SELF._health;
-  string my_stance = WINNER_MAP[monster._stance];
+  string my_stance = get_weakness(monster._stance);
   int my_damage = get_stat(SELF, my_stance);
   while (monster_health > 0){
     monster_health -= my_damage;
@@ -92,19 +93,19 @@ vector<node_id_t> get_path(node_id_t source, node_id_t node) {
   return API->shortest_paths(source, node)[0]; 
 }
 
-vector<Monster> get_speed_monsters() {
+vector<Monster> get_health_monsters() {
   vector <Monster> monsters = API->get_all_monsters();
-  vector <Monster> speed_monsters;
+  vector <Monster> health_monsters;
   for (Monster monster : monsters){
-    if (!monster._dead && monster._death_effects._speed > 0){
-      speed_monsters.push_back(monster);
+    if (!monster._dead && monster._death_effects._health > 0){
+      health_monsters.push_back(monster);
     }
   }
-  return speed_monsters;
+  return health_monsters;
 }
 
 Monster get_closest(vector<Monster> monsters) {
-  int smallest_length = INT_MAX;
+  int smallest_length = 25;
   Monster closest_monster;
   for (Monster monster: monsters) {
     vector<node_id_t> path = get_path(monster._location);
@@ -117,30 +118,14 @@ Monster get_closest(vector<Monster> monsters) {
   return closest_monster;
 }
 
-string get_random_stance() {
-  int r = rand() % 3;
-  switch (r) {
-    case 0:
-      return "Rock";
-    case 1:
-      return "Paper";
-    case 2:
-      return "Scissors";
-    default:
-      return "";
-  }
-}
-
 string set_stance(node_id_t destination) {
-  node_id_t node;
+  node_id_t node = SELF._location;
   if (SELF._movement_counter == 1) {
     node = destination;
-  } else {
-    node = SELF._location;
   }
   if (API->has_monster(node)) {
     Monster monster = API->get_monster(node);
-    return WINNER_MAP[monster._stance]; 
+    return get_weakness(monster._stance); 
   }
   return get_random_stance();
 }
@@ -167,12 +152,37 @@ node_id_t get_step_towards_monster(Monster monster) {
   return path[0];
 }
 
+void update_history(Strategy &strategy) {
+  if (SELF._location == OPPONENT._location && SELF._stance != "Invalid Stance") {
+    strategy.add_history(SELF._stance, OPPONENT._stance);
+  }
+}
+
+bool will_engage(node_id_t next) {
+  node_id_t myLocation = SELF._location;
+  if (SELF._movement_counter == 1) {
+    // fprintf(stderr, "Calculating from destination\n");
+    myLocation = next;
+  }
+  if (myLocation == OPPONENT._location) {
+    // fprintf(stderr, "SAME LOCATION\n");
+    return true;
+  }
+  vector<node_id_t> neighbors = API->get_adjacent_nodes(myLocation);
+  if (OPPONENT._movement_counter == 1) {
+    for (node_id_t node : neighbors) {
+      if (node == OPPONENT._location) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 int main() {
-  srand (time(NULL));
-  WINNER_MAP["Rock"] = "Paper";
-  WINNER_MAP["Scissors"] = "Rock";
-  WINNER_MAP["Paper"] = "Scissors";
+  Strategy strategy;\
   int my_player_num = 0;
+  
   while(1){
 		char* buf = NULL;
 		size_t size = 0;
@@ -184,11 +194,18 @@ int main() {
 		} else {
 			API->update(data["game_data"]);
       SELF = API->get_self();
+      OPPONENT = API->get_opponent();
+      update_history(strategy);
 			 //YOUR CODE HERE
-      vector <Monster> speedMonsters = get_speed_monsters();
-      Monster closestMon = get_closest(speedMonsters);
+      // vector <Monster> healthMonsters = get_health_monsters();
+      // Monster closestMon = get_closest(healthMonsters);
+      Monster closestMon = API->nearest_monsters(SELF._location, 1)[0];
       node_id_t target = get_step_towards_monster(closestMon);
-      API->submit_decision(target, set_stance(target)); //CHANGE THIS
+      string stance = set_stance(target);
+      if (will_engage(target)) {
+        stance = strategy.get_stance(OPPONENT);
+      }
+      API->submit_decision(target, stance); //CHANGE THIS
       fflush(stdout);
       free(buf);
     }
