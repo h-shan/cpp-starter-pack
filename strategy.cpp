@@ -7,7 +7,7 @@ using namespace std;
 const string INVALID = "INVALID";
 
 string Strategy::_find_match(int length) {
-  if (_history.size() < (size_t)length) {
+  if (_history.size() <= (size_t)length) {
     return "";
   }
  
@@ -23,7 +23,7 @@ string Strategy::_find_match(int length) {
     bool match = true;
     for (size_t j = i; j < i + length; j++) {
       vector<string> vec = *iter;
-      if (_history[i][0] != vec[0] || _history[i][1] != vec[1]) {
+      if (_history[j][0] != vec[0] || _history[j][1] != vec[1]) {
         match = false;
         break;
       }
@@ -44,7 +44,7 @@ string Strategy::get_stance(Player opponent) {
     return get_weakness(get_strongest_stat(opponent)); 
   }
   string pred = "";
-  for (size_t i = 1; i < _history.size(); i++) {
+  for (size_t i = 1; i < 10; i++) {
     string res = _find_match(i);
     if (res.length()) {
       pred = res;

@@ -181,7 +181,7 @@ bool will_engage(node_id_t next) {
 }
 
 int main() {
-  Strategy strategy;\
+  Strategy strategy;
   int my_player_num = 0;
   
   while(1){
@@ -203,7 +203,8 @@ int main() {
 
       if (CURRENT_TARGET_MONSTER._name != "") {
         CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, CURRENT_TARGET_MONSTER._name, 0)[0];
-        if (CURRENT_TARGET_MONSTER._dead && CURRENT_TARGET_MONSTER._name != "Health 0") {
+        bool isHealing = CURRENT_TARGET_MONSTER._name == "Health 0" && SELF._health < 50;
+        if (CURRENT_TARGET_MONSTER._dead && !isHealing) {
           if (SELF._health < 50) {
             CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, "Health 0", 0)[0];
           } else {
@@ -218,6 +219,7 @@ int main() {
 
       node_id_t target = get_step_towards_monster(CURRENT_TARGET_MONSTER);
       string stance = set_stance(target);
+
       if (will_engage(target)) {
         stance = strategy.get_stance(OPPONENT);
       }
