@@ -31,6 +31,7 @@ Player OPPONENT("", 0, 0, 0, 0, NULL);
 Monster CURRENT_TARGET_MONSTER;
 Monster NEXT_TARGET_MONSTER;
 StateMachine STATE_MACHINE;
+Strategy STRATEGY;
 
 // return 0 if we have disadvantage, 0.5 - 1 based on sigmoid if we have advantage
 double get_advantage(){
@@ -52,10 +53,8 @@ double get_advantage(){
 }
 
 bool should_pursuit(){
-  if (get_advantage() >= 0.5){
-    return true;
-  }
-  return false;
+  //fprintf(stderr, "Get_advantage: %f\n", get_advantage());
+  return get_advantage() >= 0.75;
 }
 
 node_id_t pursuit(){
@@ -119,30 +118,25 @@ int time_to_target(node_id_t node) {
   return player_speed * path.size() - current_progress;
 }
 
-node_id_t get_path_player() {
-  vector<node_id_t> path = get_path(OPPONENT._location);
+node_id_t get_step(node_id_t node) {
+  vector<node_id_t> path = get_path(node);
   return path[0];
 }
 
-node_id_t get_step_towards_monster(Monster monster) {
-  vector<node_id_t> path = get_path(monster._location);
-  return path[0];
-}
-
-void update_history(Strategy &strategy) {
+void update_history() {
   if (SELF._location == OPPONENT._location && SELF._stance != "Invalid Stance") {
-    strategy.add_history(SELF._stance, OPPONENT._stance);
+    STRATEGY.add_history(SELF._stance, OPPONENT._stance);
   }
 }
 
 bool will_engage(node_id_t next) {
   node_id_t myLocation = SELF._location;
   if (SELF._movement_counter == SELF._speed + 1) {
-    // //fprintf(stderr, "Calculating from destination\n");
+    // ////fprintf(stderr, "Calculating from destination\n");
     myLocation = next;
   }
   if (myLocation == OPPONENT._location) {
-    // //fprintf(stderr, "SAME LOCATION\n");
+    // ////fprintf(stderr, "SAME LOCATION\n");
     return true;
   }
   vector<node_id_t> neighbors = API->get_adjacent_nodes(myLocation);
@@ -157,7 +151,7 @@ bool will_engage(node_id_t next) {
 }
 
 Monster get_closest_monster(bool not_current = false) {
-  //fprintf(stderr, "get_closest_monster start\n");
+  ////fprintf(stderr, "get_closest_monster start\n");
   vector<Monster> closestMonsters = API->nearest_monsters(SELF._location, 0);
   vector<node_id_t> adjacent = API->get_adjacent_nodes(SELF._location);
   if (not_current) {
@@ -168,7 +162,7 @@ Monster get_closest_monster(bool not_current = false) {
           continue;
         }
         if (!monster._dead || monster._respawn_counter <= time_to_target(monster._location)) {
-          //fprintf(stderr, "get_closest_monster end*****************\n");
+          ////fprintf(stderr, "get_closest_monster end*****************\n");
           return monster;
         }
       }  
@@ -177,31 +171,109 @@ Monster get_closest_monster(bool not_current = false) {
 
   for (Monster monster: closestMonsters) {
     if (!monster._dead || monster._respawn_counter <= time_to_target(monster._location)) {
-      //fprintf(stderr, "get_closest_monster end\n");
+      ////fprintf(stderr, "get_closest_monster end\n");
       return monster;
     }
   }
   closestMonsters = API->nearest_monsters(SELF._location, 1);
-  //fprintf(stderr, "get_closest_monster end\n");
+  ////fprintf(stderr, "get_closest_monster end\n");
   return closestMonsters[rand() % closestMonsters.size()];
 }
 
 void update_game_state(){
-  if (SELF._health < 50){
+  if (SELF._health < 75){
     STATE_MACHINE.set_state(State::HEALING);
-  }
-  else if (should_pursuit()){
+    API->log("HEALING");
+  } else if (should_pursuit()){
     STATE_MACHINE.set_state(State::PURSUIT);
+    API->log("PURSUIT");
   }
   else {
     STATE_MACHINE.set_state(State::STANDARD);
+    API->log("STANDARD");
   }
 }
 
+void handle_standard(){
+  //fprintf(stderr, "Begin standard\n");
+  node_id_t target;
+  if (SELF._destination != SELF._location) {
+    target = SELF._destination;
+  } else {
+    Monster monster = get_closest_monster(true);
+    //fprintf(stderr, "Mark 1\n");
+    target = monster._location;
+    //fprintf(stderr, "Mark 2, %d\n", target);
+    
+    if (API->has_monster(SELF._location) && !API->get_monster(SELF._location)._dead) {
+      if (turns_to_kill(SELF, API->get_monster(SELF._location)) < time_to_next_move(SELF)) {
+        //fprintf(stderr, "Option 1\n");
+        target = get_step(target);
+      } else {
+        //fprintf(stderr, "Option 2\n");
+        target = SELF._location;
+      }
+    } else {
+      //fprintf(stderr, "Option 3\n");
+      target = get_step(target);
+    }
+    //fprintf(stderr, "Mark 3\n");
+  }
+  string stance = set_stance(target);
+    //fprintf(stderr, "Mark 4\n");
+
+  if (will_engage(target)) {
+    stance = STRATEGY.get_stance(OPPONENT);
+  }
+  //fprintf(stderr, "End standard\n");
+  API->submit_decision(target, stance);
+}
+
+void handle_pursuit(){
+  //fprintf(stderr, "Begin pursuit\n");
+  node_id_t target = OPPONENT._location;
+
+  if (API->has_monster(SELF._location) && !API->get_monster(SELF._location)._dead) {
+    if (turns_to_kill(SELF, API->get_monster(SELF._location)) < time_to_next_move(SELF)) {
+      target = get_step(target);
+    } else {
+      target = SELF._location;
+    }
+  } else {
+    target = get_step(target);
+  }
+  string stance = set_stance(target);
+
+  if (will_engage(target)) {
+    stance = STRATEGY.get_stance(OPPONENT);
+  }
+  //fprintf(stderr, "End pursuit\n");
+  API->submit_decision(target, stance); //CHANGE THIS
+}
+
+
+void handle_healing() {
+  node_id_t target;
+  if (API->has_monster(SELF._location) && !API->get_monster(SELF._location)._dead) {
+    if (turns_to_kill(SELF, API->get_monster(SELF._location)) < time_to_next_move(SELF)) {
+      target = get_step(0);
+    } else {
+      target = SELF._location;
+    }
+  } else {
+    target = get_step(0);
+  }
+
+  string stance = set_stance(target);
+  if (will_engage(target)) {
+    stance = STRATEGY.get_stance(OPPONENT);
+  }
+  API->submit_decision(target, stance);
+}
+
 int main() {
-  Strategy strategy;
   int my_player_num = 0;
-  //fprintf(stderr, "Mark 1\n");
+  ////fprintf(stderr, "Mark 1\n");
   
   while(1){
 		char* buf = NULL;
@@ -212,62 +284,26 @@ int main() {
 			my_player_num = data["player_id"];
 			API = new Game_Api(my_player_num, data["map"]);
 		} else {
-        //fprintf(stderr, "Mark 2\n");
+        ////fprintf(stderr, "Mark 2\n");
 
 			API->update(data["game_data"]);
       SELF = API->get_self();
       OPPONENT = API->get_opponent();
-      update_history(strategy);
-  //fprintf(stderr, "Mark 3\n");
+      update_history();
+  ////fprintf(stderr, "Mark 3\n");
 
-      bool find_next = false;
-      if (CURRENT_TARGET_MONSTER._name != "") {
-        CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, CURRENT_TARGET_MONSTER._name, 0)[0];
-        bool isHealing = CURRENT_TARGET_MONSTER._name == "Health 0" && SELF._health < 50;
-        if (CURRENT_TARGET_MONSTER._dead && !isHealing) {
-          if (SELF._health < 50) {
-            CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, "Health 0", 0)[0];
-          } else {
-            if (NEXT_TARGET_MONSTER._location != SELF._location) {
-              CURRENT_TARGET_MONSTER = NEXT_TARGET_MONSTER;
-            } else {
-              CURRENT_TARGET_MONSTER = get_closest_monster();
-            }
-          }
-        }
-          //fprintf(stderr, "Mark 4\n");
-
-        // if we're at the same place already
-        if (CURRENT_TARGET_MONSTER._location == SELF._location) {
-          if (turns_to_kill(SELF, CURRENT_TARGET_MONSTER) < time_to_next_move(SELF)) {
-            find_next = true;
-          }
-        }
-      } else {
-        CURRENT_TARGET_MONSTER = get_closest_monster();
+      update_game_state();
+      switch (STATE_MACHINE.get_state()){
+        case State::STANDARD:
+          handle_standard();
+          break;
+        case State::PURSUIT:
+          handle_pursuit();
+          break;
+        case State::HEALING:
+          handle_healing();
+          break;
       }
- // //fprintf(stderr, "Mark 5\n");
-
-      node_id_t target = get_step_towards_monster(CURRENT_TARGET_MONSTER);
-      // still want stance to depend on current monster
-      string stance = set_stance(target);
-  // //fprintf(stderr, "Mark 6\n");
-
-      if (find_next) {
-        if (SELF._destination != SELF._location) {
-          target = SELF._destination;
-        }
-        NEXT_TARGET_MONSTER = get_closest_monster(true);
-        target = get_step_towards_monster(NEXT_TARGET_MONSTER);
-      }
-  //fprintf(stderr, "Mark 7\n");
-
-      if (will_engage(target)) {
-        stance = strategy.get_stance(OPPONENT);
-      }
-        //fprintf(stderr, "Mark 8\n");
-
-      API->submit_decision(target, stance); //CHANGE THIS
       fflush(stdout);
       free(buf);
     }
