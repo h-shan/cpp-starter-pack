@@ -13,13 +13,48 @@ using DeathEffects = Game_Api::DeathEffects;
 #define RESPONSE_NSECS 0
 
 #include <iostream>
+#include <string>
+#include <vector>
+
 using namespace std;
 //You may add global variables and helper functions
+Game_Api * api;
+
+const int NUM_NODES = 25;
+
+void log_monsters() {
+  Player player = api->get_self();
+  int num_monsters = 0;
+  for (node_id_t i = 0; i < NUM_NODES; i++) {
+    if (api->has_monster(i)) {
+      num_monsters++;
+      Monster monster = api->get_monster(i);
+      char msg[1000];
+      sprintf(msg, "---------------------------------------\nName: %s\nHealth: %d\nBase health: %d\nStance: %s\n Respawn Counter: %d\n Respawn Rate: %d\n Location: %d\nAttack: %d\nDeath Effects:\nRock: %d\nPaper: %d\nScissors: %d\nSpeed: %d\nHealth: %d",
+        monster._name.c_str(),
+        monster._health,
+        monster._base_health,
+        monster._stance.c_str(),
+        monster._respawn_counter,
+        monster._respawn_rate,
+        monster._location,
+        monster._attack,
+        monster._death_effects._rock,
+        monster._death_effects._paper,
+        monster._death_effects._scissors,
+        monster._death_effects._speed,
+        monster._death_effects._health
+        );
+      api->log(string(msg));
+    }
+  }
+  api->log("NUM_MONSTERS:**************************\n" + to_string(num_monsters));
+}
 
 int main() {
-	Game_Api * api;
 	int my_player_num = 0;
-	while(1){
+	bool printed = false;
+  while(1){
 		char* buf = NULL;
 		size_t size = 0;
 		getline(&buf, &size, stdin);
@@ -29,12 +64,16 @@ int main() {
 			api = new Game_Api(my_player_num, data["map"]);
 		} else {
 			api->update(data["game_data"]);
-
+      if (!printed) {
+        log_monsters();
+        printed = true;
+      }
 			 //YOUR CODE HERE
 
-             		api->submit_decision(0,"Rock"); //CHANGE THIS
-             		fflush(stdout);
-			free(buf);
-	       }
-	     }
-	   }
+      api->submit_decision(0,"Rock"); //CHANGE THIS
+      fflush(stdout);
+      free(buf);
+    }
+  }
+}
+
