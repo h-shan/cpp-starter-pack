@@ -200,18 +200,23 @@ int main() {
 			 //YOUR CODE HERE
       // vector <Monster> healthMonsters = get_health_monsters();
       // Monster closestMon = get_closest(healthMonsters);
-      Monster targetMon; 
+
       if (CURRENT_TARGET_MONSTER._name != "") {
-        targetMon = API->nearest_monsters(SELF._location, CURRENT_TARGET_MONSTER._name, 0)[0];
-        if (targetMon._dead) {
-          targetMon = API->nearest_monsters(SELF._location, 1)[0];
+        CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, CURRENT_TARGET_MONSTER._name, 0)[0];
+        if (CURRENT_TARGET_MONSTER._dead && CURRENT_TARGET_MONSTER._name != "Health 0") {
+          if (SELF._health < 50) {
+            CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, "Health 0", 0)[0];
+          } else {
+            vector<Monster> nearestMonsters = API->nearest_monsters(SELF._location, 1);
+            CURRENT_TARGET_MONSTER = nearestMonsters[rand() % nearestMonsters.size()];
+          }
         }
       } else {
-        targetMon = CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, 1)[0];
+        vector<Monster> nearestMonsters = API->nearest_monsters(SELF._location, 1);
+        CURRENT_TARGET_MONSTER = nearestMonsters[rand() % nearestMonsters.size()];
       }
-      
-      Monster closestMon = API->nearest_monsters(SELF._location, 1)[0];
-      node_id_t target = get_step_towards_monster(closestMon);
+
+      node_id_t target = get_step_towards_monster(CURRENT_TARGET_MONSTER);
       string stance = set_stance(target);
       if (will_engage(target)) {
         stance = strategy.get_stance(OPPONENT);
