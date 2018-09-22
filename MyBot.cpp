@@ -212,7 +212,7 @@ Monster get_closest_monster(bool not_current = false) {
 }
 
 void update_game_state(){
-  if (SELF._health < 50){
+  if (SELF._health < 75){
     STATE_MACHINE.set_state(State::HEALING);
   }
   else if (should_pursuit()){
@@ -221,6 +221,25 @@ void update_game_state(){
   else {
     STATE_MACHINE.set_state(State::STANDARD);
   }
+}
+
+void handle_standard(){
+  
+}
+
+void handle_pursuit(){
+      node_id_t target = pursuit();
+      // still want stance to depend on current monster
+      string stance = set_stance(target);
+
+      if (will_engage(target)) {
+        stance = strategy.get_stance(OPPONENT);
+      }
+      API->submit_decision(target, stance); //CHANGE THIS
+}
+
+void handle_healing(){
+  
 }
 
 int main() {
@@ -242,7 +261,27 @@ int main() {
       update_history(strategy);
 
       bool find_next = false;
-      if (CURRENT_TARGET_MONSTER._name != "") {
+      udpate_game_state();
+        switch (STATE_MACHINE){
+		case STANDARD:
+			handle_standard();
+			break;
+		case PURSUIT:
+			handle_pursuit();
+			break;
+		case HEALING:
+			handle_healing();
+			break;
+	}
+      if (API->has_monster(SELF._location){
+        
+
+
+      }
+	
+	
+	
+	if (CURRENT_TARGET_MONSTER._name != "") {
         CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, CURRENT_TARGET_MONSTER._name, 0)[0];
         bool isHealing = CURRENT_TARGET_MONSTER._name == "Health 0" && SELF._health < 50;
         if (CURRENT_TARGET_MONSTER._dead && !isHealing) {
@@ -263,23 +302,7 @@ int main() {
         CURRENT_TARGET_MONSTER = get_closest_monster();
       }
 
-      node_id_t target = get_step_towards_monster(CURRENT_TARGET_MONSTER);
-      // still want stance to depend on current monster
-      string stance = set_stance(target);
-
-      if (find_next) {
-        if (SELF._destination != SELF._location) {
-          target = SELF._destination;
-        }
-        NEXT_TARGET_MONSTER = get_closest_monster(true);
-        target = get_step_towards_monster(NEXT_TARGET_MONSTER);
-      }
-
-      if (will_engage(target)) {
-        stance = strategy.get_stance(OPPONENT);
-      }
-      API->submit_decision(target, stance); //CHANGE THIS
-      fflush(stdout);
+       fflush(stdout);
       free(buf);
     }
   }
