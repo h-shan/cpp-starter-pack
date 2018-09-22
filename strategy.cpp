@@ -18,7 +18,8 @@ string Strategy::_find_match(int length) {
   int max_counter = 0;  
   string best = "";
 
-  for (size_t i = 0; i < _history.size() - 1 - length; i++) {
+  size_t num_to_review = 40;
+  for (size_t i = _history.size() - num_to_review; i < _history.size() - 1 - length; i++) {
     vector<vector<string>>::iterator iter = _history.end() - length;
     bool match = true;
     for (size_t j = i; j < i + length; j++) {
@@ -52,6 +53,7 @@ string Strategy::get_stance(Player opponent) {
       break;
     }
   }
+
   if (pred.length()) {
     return get_weakness(pred);
   }
