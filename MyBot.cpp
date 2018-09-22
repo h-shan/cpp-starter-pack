@@ -53,6 +53,15 @@ void log_monsters() {
 }
 
 vector<Monster> get_speed_monsters() {
+  vector <Monster> monsters = api->get_all_monsters();
+  vector <Monster> speed_monsters;
+  for (Monster monster : monsters){
+    if (monster._death_effects._speed > 0){
+      speed_monsters.push_back(monster);
+    }
+  }
+
+  return speed_monsters;
 
 }
 
