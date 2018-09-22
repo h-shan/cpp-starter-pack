@@ -73,6 +73,12 @@ Monster get_closest(vector<Monster> monsters) {
   return closest_monster;
 }
 
+vector<Monster> get_path_monsters() {
+  vector<vector<node_id_t>> = api->shotest_paths(PLAYER_SELF._location, monster._location);
+  int time = (7 - PLAYER_SELF._speed) * vector.size() - (7 - PLAYER_SELF._movement_counter);
+  return time;
+}
+
 node_it_t get_step_towards_monster(Monster monster) {
   vector<vector<node_id_t> > paths = api->shortest_paths(PLAYER_SELF._location, monster._location);
   return paths[0][0];
