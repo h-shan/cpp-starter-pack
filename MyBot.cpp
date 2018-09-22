@@ -91,11 +91,16 @@ void log_monsters() {
 }
 
 int get_remaining_health(Monster monster){
-  monster_health = monster._health;
-  health =
-
-
-
+  int monster_health = monster._health;
+  int monster_damage = monster._attack;
+  int health = PLAYER_SELF._health;
+  string my_stance = WINNER_MAP[monster._stance];
+  int my_damage = get_stat(PLAYER_SELF, my_stance);
+  while (monster_health > 0){
+    monster_health -= my_damage;
+    health -= monster_damage;
+  }
+  return health;
 }
 
 vector<node_id_t> get_path(Monster monster) {
