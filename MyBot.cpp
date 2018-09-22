@@ -100,31 +100,6 @@ vector<node_id_t> get_path(node_id_t source, node_id_t node) {
   return API->shortest_paths(source, node)[0]; 
 }
 
-vector<Monster> get_health_monsters() {
-  vector <Monster> monsters = API->get_all_monsters();
-  vector <Monster> health_monsters;
-  for (Monster monster : monsters){
-    if (!monster._dead && monster._death_effects._health > 0){
-      health_monsters.push_back(monster);
-    }
-  }
-  return health_monsters;
-}
-
-Monster get_closest(vector<Monster> monsters) {
-  int smallest_length = 25;
-  Monster closest_monster;
-  for (Monster monster: monsters) {
-    vector<node_id_t> path = get_path(monster._location);
-    size_t length = path.size();
-    if (length < smallest_length) {
-      smallest_length = length;
-      closest_monster = monster;
-    }
-  }
-  return closest_monster;
-}
-
 string set_stance(node_id_t destination) {
   node_id_t node = SELF._location;
   if (SELF._movement_counter == SELF._speed + 1) {
@@ -163,11 +138,11 @@ void update_history(Strategy &strategy) {
 bool will_engage(node_id_t next) {
   node_id_t myLocation = SELF._location;
   if (SELF._movement_counter == SELF._speed + 1) {
-    // fprintf(stderr, "Calculating from destination\n");
+    // //fprintf(stderr, "Calculating from destination\n");
     myLocation = next;
   }
   if (myLocation == OPPONENT._location) {
-    // fprintf(stderr, "SAME LOCATION\n");
+    // //fprintf(stderr, "SAME LOCATION\n");
     return true;
   }
   vector<node_id_t> neighbors = API->get_adjacent_nodes(myLocation);
@@ -182,7 +157,7 @@ bool will_engage(node_id_t next) {
 }
 
 Monster get_closest_monster(bool not_current = false) {
-  fprintf(stderr, "get_closest_monster start\n");
+  //fprintf(stderr, "get_closest_monster start\n");
   vector<Monster> closestMonsters = API->nearest_monsters(SELF._location, 0);
   vector<node_id_t> adjacent = API->get_adjacent_nodes(SELF._location);
   if (not_current) {
@@ -193,7 +168,7 @@ Monster get_closest_monster(bool not_current = false) {
           continue;
         }
         if (!monster._dead || monster._respawn_counter <= time_to_target(monster._location)) {
-  fprintf(stderr, "get_closest_monster end\n");
+          //fprintf(stderr, "get_closest_monster end*****************\n");
           return monster;
         }
       }  
@@ -202,12 +177,12 @@ Monster get_closest_monster(bool not_current = false) {
 
   for (Monster monster: closestMonsters) {
     if (!monster._dead || monster._respawn_counter <= time_to_target(monster._location)) {
-  fprintf(stderr, "get_closest_monster end\n");
+      //fprintf(stderr, "get_closest_monster end\n");
       return monster;
     }
   }
   closestMonsters = API->nearest_monsters(SELF._location, 1);
-  fprintf(stderr, "get_closest_monster end\n");
+  //fprintf(stderr, "get_closest_monster end\n");
   return closestMonsters[rand() % closestMonsters.size()];
 }
 
@@ -226,6 +201,7 @@ void update_game_state(){
 int main() {
   Strategy strategy;
   int my_player_num = 0;
+  //fprintf(stderr, "Mark 1\n");
   
   while(1){
 		char* buf = NULL;
@@ -236,10 +212,13 @@ int main() {
 			my_player_num = data["player_id"];
 			API = new Game_Api(my_player_num, data["map"]);
 		} else {
+        //fprintf(stderr, "Mark 2\n");
+
 			API->update(data["game_data"]);
       SELF = API->get_self();
       OPPONENT = API->get_opponent();
       update_history(strategy);
+  //fprintf(stderr, "Mark 3\n");
 
       bool find_next = false;
       if (CURRENT_TARGET_MONSTER._name != "") {
@@ -249,10 +228,15 @@ int main() {
           if (SELF._health < 50) {
             CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, "Health 0", 0)[0];
           } else {
-
-            CURRENT_TARGET_MONSTER = get_closest_monster();
+            if (NEXT_TARGET_MONSTER._location != SELF._location) {
+              CURRENT_TARGET_MONSTER = NEXT_TARGET_MONSTER;
+            } else {
+              CURRENT_TARGET_MONSTER = get_closest_monster();
+            }
           }
         }
+          //fprintf(stderr, "Mark 4\n");
+
         // if we're at the same place already
         if (CURRENT_TARGET_MONSTER._location == SELF._location) {
           if (turns_to_kill(SELF, CURRENT_TARGET_MONSTER) < time_to_next_move(SELF)) {
@@ -262,10 +246,12 @@ int main() {
       } else {
         CURRENT_TARGET_MONSTER = get_closest_monster();
       }
+ // //fprintf(stderr, "Mark 5\n");
 
       node_id_t target = get_step_towards_monster(CURRENT_TARGET_MONSTER);
       // still want stance to depend on current monster
       string stance = set_stance(target);
+  // //fprintf(stderr, "Mark 6\n");
 
       if (find_next) {
         if (SELF._destination != SELF._location) {
@@ -274,10 +260,13 @@ int main() {
         NEXT_TARGET_MONSTER = get_closest_monster(true);
         target = get_step_towards_monster(NEXT_TARGET_MONSTER);
       }
+  //fprintf(stderr, "Mark 7\n");
 
       if (will_engage(target)) {
         stance = strategy.get_stance(OPPONENT);
       }
+        //fprintf(stderr, "Mark 8\n");
+
       API->submit_decision(target, stance); //CHANGE THIS
       fflush(stdout);
       free(buf);
