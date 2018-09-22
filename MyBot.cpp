@@ -111,13 +111,8 @@ string set_stance(node_id_t destination) {
 int time_to_target(node_id_t node) {
   vector<node_id_t> path = get_path(node);
   int player_speed = 7 - SELF._speed;
-  return player_speed * path.size() - (player_speed - SELF._movement_counter);
-}
-
-int time_to_target(node_id_t source, node_id_t node) {
-  vector<node_id_t> path = get_path(source, node);
-  int player_speed = 7 - SELF._speed;
-  return player_speed * path.size() - (player_speed - SELF._movement_counter);
+  int current_progress = path[0] == SELF._desitnation ? time_to_next_move(SELF) : 0;
+  return player_speed * path.size() - current_progress;
 }
 
 node_id_t get_path_player() {
@@ -157,6 +152,32 @@ bool will_engage(node_id_t next) {
   return false;
 }
 
+Monster get_closest_monster(bool not_current = false) {
+  vector<Monster> closestMonsters = API->nearest_monsters(SELF._location, 0);
+  vector<node_id_t> adjacent = API->get_adjacent_nodes(SELF._location);
+  if (not_current) {
+    for (node_id_t node : adjacent) {
+      vector<Monster> adjacentMonsters = API->nearest_monsters(node, 0);
+      for (Monster monster: adjacentMonsters) {
+        if (monster._location == SELF._location) {
+          continue;
+        }
+        if (!monster._dead || monster._respawn_counter <= time_to_target(SELF._location, monster._location)) {
+          return monster;
+        }
+      }  
+    }
+  }
+
+  for (Monster monster: closestMonsters) {
+    if (!monster._dead || monster._respawn_counter <= time_to_target(SELF._location, monster._location)) {
+      return monster;
+    }
+  }
+  closestMonsters = API->nearest_monsters(SELF._location, 1);
+  return closestMonsters[rand() % closestMonsters.size()];
+}
+
 int main() {
   Strategy strategy;
   GameStateEngine gameState;
@@ -179,6 +200,7 @@ int main() {
       // vector <Monster> healthMonsters = get_health_monsters();
       // Monster closestMon = get_closest(healthMonsters);
 
+      bool find_next = false;
       if (CURRENT_TARGET_MONSTER._name != "") {
         CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, CURRENT_TARGET_MONSTER._name, 0)[0];
         bool isHealing = CURRENT_TARGET_MONSTER._name == "Health 0" && SELF._health < 50;
@@ -186,17 +208,29 @@ int main() {
           if (SELF._health < 50) {
             CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, "Health 0", 0)[0];
           } else {
-            vector<Monster> nearestMonsters = API->nearest_monsters(SELF._location, 1);
-            CURRENT_TARGET_MONSTER = nearestMonsters[rand() % nearestMonsters.size()];
+            CURRENT_TARGET_MONSTER = get_closest_monster();
           }
         }
-        if (CURRENT_TARGET_MONSTER._location == )
+        // if we're at the same place already
+        if (CURRENT_TARGET_MONSTER._location == SELF._location) {
+          if (turns_to_kill(SELF, CURRENT_TARGET_MONSTER) < time_to_next_move(SELF)) {
+            find_next = true;
+          }
+        }
       } else {
-        vector<Monster> nearestMonsters = API->nearest_monsters(SELF._location, 1);
-        CURRENT_TARGET_MONSTER = nearestMonsters[rand() % nearestMonsters.size()];
+        CURRENT_TARGET_MONSTER = get_closest_monster();
       }
 
+      node_id_t target = get_step_towards_monster(CURRENT_TARGET_MONSTER);
+      // still want stance to depend on current monster
       string stance = set_stance(target);
+
+      if (find_next) {
+        if (self._destination != self._location) {
+          target = self._destination;
+        }
+        target = get_step_towards_monster(get_closest_monster(true));
+      }
 
       if (will_engage(target)) {
         stance = strategy.get_stance(OPPONENT);
