@@ -29,23 +29,40 @@ map<string, string> WINNER_MAP;
 
 const int NUM_NODES = 25;
 
-double advantage(){
-  Player me = API->get_self();
-  Player opponent = API->get_opponent();
-  int opponent_strength = opponent._rock + opponent._paper + opponent._scissors;
-  int my_strength = me._rock + me._paper + me._scissors;
-  int opponent_health = opponent._health;
-  int my_health = me._health;
+// stance is "Rock", "Paper", or "Scissors"
+double get_stat(Player player, string stance) {
+  switch (stance) {
+    case "Rock":
+      return player._rock;
+    case "Paper":
+      return player._paper;
+    case "Scissors":
+      return player._scissors;
+    default:
+      throw(1);
+  }
+}
+
+double get_strength(Player player) {
+  return player._rock + player._paper + player._scissors;
+}
+
+// return 0 if we have disadvantage, 0.5 - 1 based on sigmoid if we have advantage
+double get_advantage(){
+  int self_health = PLAYER_SELF._health;
+  int self_strength = get_strength(PLAYER_SELF);
+  int opponent_health = OPPONENT._health;
+  int opponent_strength = get_strength(OPPONENT);
   // ratio: how many rounds can we survive
-  double my_rounds = ((double)my_health) / ((double)opponent_strength);
-  double opponent_rounds = ((double)opponent_health)/((double)my_strength);
+  double my_rounds = ((double)self_health) / (opponent_strength);
+  double opponent_rounds = ((double)opponent_health)/(self_strength);
   // ratio: how many more rounds can we survive than the opponent
-  double my_advantage = my_rounds / opponent_rounds;
+  double advantage = my_rounds / opponent_rounds;
   // if we have no chance, return flag "-999.0"
-  if (my_advantage < 1)
-    return -999.0;
+  if (advantage < 1)
+    return 0;
   // calculate and return sigmoid function if there is a chance
-  double sigmoid = (exp(my_advantage)) / (exp(my_advantage) + 1); 
+  double sigmoid = (exp(advantage)) / (exp(advantage) + 1); 
   return sigmoid;
 }
 
@@ -73,15 +90,15 @@ void log_monsters() {
   API->log("NUM_MONSTERS:**************************\n" + to_string(monsters.size()));
 }
 
-vector<node_id_t> get_path(Monster monster) {
-  return API->shortest_paths(PLAYER_SELF._location, monster._location)[0]; 
+vector<node_id_t> get_path(node_id_t node) {
+  return API->shortest_paths(PLAYER_SELF._location, node)[0]; 
 }
 
 vector<Monster> get_speed_monsters() {
   vector <Monster> monsters = API->get_all_monsters();
   vector <Monster> speed_monsters;
   for (Monster monster : monsters){
-    if (monster._death_effects._speed > 0){
+    if (!monster._dead && monster._death_effects._speed > 0){
       speed_monsters.push_back(monster);
     }
   }
@@ -92,8 +109,8 @@ Monster get_closest(vector<Monster> monsters) {
   int smallest_length = INT_MAX;
   Monster closest_monster;
   for (Monster monster: monsters) {
-    vector<vector<node_id_t> > paths = API->shortest_paths(PLAYER_SELF._location, monster._location);
-    size_t length = paths[0].size();
+    vector<node_id_t> path = get_path(monster._location);
+    size_t length = path.size();
     if (length < smallest_length) {
       smallest_length = length;
       closest_monster = monster;
@@ -130,21 +147,20 @@ string set_stance(node_id_t destination) {
   return get_random_stance();
 }
 
-vector<Monster> get_path_monsters() {
-  vector<vector<node_id_t>> = API->shotest_paths(PLAYER_SELF._location, monster._location);
+int time_to_target(node_id_t node) {
+  vector<node_id_t> path = get_path(node);
   int player_speed = 7 - PLAYER_SELF._speed;
-  return player_speed * vector.size() - (player_speed - PLAYER_SELF._movement_counter);
+  return player_speed * path.size() - (player_speed - PLAYER_SELF._movement_counter);
 }
 
-vector<Monster> get_path_player() {
-  vector<vector<node_id_t>> playerpath = API->shortest_paths(PLAYER_SELF._location, OPPONENT._location);
-  return playerpath[0][0];
-
+node_id_t get_path_player() {
+  vector<node_id_t> path = get_path(OPPONENT._location);
+  return path[0];
 }
 
-node_it_t get_step_towards_monster(Monster monster) {
-  vector<vector<node_id_t> > paths = API->shortest_paths(PLAYER_SELF._location, monster._location);
-  return paths[0][0];
+node_id_t get_step_towards_monster(Monster monster) {
+  vector<node_id_t> path = get_path(monster._location);
+  return path[0];
 }
 
 int main() {
