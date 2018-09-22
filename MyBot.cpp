@@ -28,6 +28,7 @@ using namespace std;
 Game_Api * API;
 Player SELF("", 0, 0, 0, 0, NULL);
 Player OPPONENT("", 0, 0, 0, 0, NULL);
+Monster CURRENT_TARGET_MONSTER;
 
 // return 0 if we have disadvantage, 0.5 - 1 based on sigmoid if we have advantage
 double get_advantage(){
@@ -120,7 +121,7 @@ Monster get_closest(vector<Monster> monsters) {
 
 string set_stance(node_id_t destination) {
   node_id_t node = SELF._location;
-  if (SELF._movement_counter == 1) {
+  if (SELF._movement_counter == SELF._speed + 1) {
     node = destination;
   }
   if (API->has_monster(node)) {
@@ -160,7 +161,7 @@ void update_history(Strategy &strategy) {
 
 bool will_engage(node_id_t next) {
   node_id_t myLocation = SELF._location;
-  if (SELF._movement_counter == 1) {
+  if (SELF._movement_counter == SELF._speed + 1) {
     // fprintf(stderr, "Calculating from destination\n");
     myLocation = next;
   }
@@ -199,6 +200,16 @@ int main() {
 			 //YOUR CODE HERE
       // vector <Monster> healthMonsters = get_health_monsters();
       // Monster closestMon = get_closest(healthMonsters);
+      Monster targetMon; 
+      if (CURRENT_TARGET_MONSTER._name != "") {
+        targetMon = API->nearest_monsters(SELF._location, CURRENT_TARGET_MONSTER._name, 0)[0];
+        if (targetMon._dead) {
+          targetMon = API->nearest_monsters(SELF._location, 1)[0];
+        }
+      } else {
+        targetMon = CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, 1)[0];
+      }
+      
       Monster closestMon = API->nearest_monsters(SELF._location, 1)[0];
       node_id_t target = get_step_towards_monster(closestMon);
       string stance = set_stance(target);
