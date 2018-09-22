@@ -21,6 +21,7 @@ using namespace std;
 //You may add global variables and helper functions
 Game_Api * api;
 Player PLAYER_SELF("", 0, 0, 0, 0, NULL);
+Player OPPONENT("", 0, 0, 0, 0, NULL);
 
 const int NUM_NODES = 25;
 
@@ -74,9 +75,15 @@ Monster get_closest(vector<Monster> monsters) {
 }
 
 vector<Monster> get_path_monsters() {
-  vector<vector<node_id_t>> = api->shotest_paths(PLAYER_SELF._location, monster._location);
-  int time = (7 - PLAYER_SELF._speed) * vector.size() - (7 - PLAYER_SELF._movement_counter);
+  vector<vector<node_id_t>> path = api->shortest_paths(PLAYER_SELF._location, monster._location);
+  int time = (7 - PLAYER_SELF._speed) * path.size() - (7 - PLAYER_SELF._movement_counter);
   return time;
+}
+
+vector<Monster> get_path_player() {
+  vector<vector<node_id_t>> playerpath = api->shortest_paths(PLAYER_SELF._location, OPPONENT._location);
+  return playerpath[0][0];
+
 }
 
 node_it_t get_step_towards_monster(Monster monster) {
