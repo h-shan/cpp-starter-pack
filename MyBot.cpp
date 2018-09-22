@@ -48,7 +48,26 @@ double get_advantage(){
   return sigmoid;
 }
 
-
+node_id_t pursuit(){
+  if (SELF._location == OPPONENT._location){
+        if (time_to_next_move(SELF) <= time_to_next_move(OPPONENT)){
+	  return SELF._location;
+        }
+	else {
+          if (SELF._destination == SELF._location){
+	    vector<node_id_t> adjacent = get_adjacent_nodes(SELF._location);
+	    return adjacent[0];
+          }
+	  return SELF._destination;
+	}
+  }
+  vector<vector<node_id_t>> paths = shortest_paths(SELF._location, OPPONENT._location);
+  for (vector<vector<node_id_t> path : paths){
+    if (path[0] == SELF._destination)
+      return path[0];
+  }
+  return paths[0][0];
+}
 
 int get_remaining_health(Monster monster){
   int monster_health = monster._health;
@@ -62,7 +81,7 @@ int get_remaining_health(Monster monster){
   }
   return health;
 }
-
+  
 vector<node_id_t> get_path(node_id_t node) {
   return API->shortest_paths(SELF._location, node)[0]; 
 }
