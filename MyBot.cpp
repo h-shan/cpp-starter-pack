@@ -16,6 +16,7 @@ using DeathEffects = Game_Api::DeathEffects;
 #include <string>
 #include <vector>
 #include <climits>
+#include <math.h>
 #include <time.h>
 #include <map>
 
@@ -27,6 +28,26 @@ Player OPPONENT("", 0, 0, 0, 0, NULL);
 map<string, string> WINNER_MAP;
 
 const int NUM_NODES = 25;
+
+double advantage(){
+  Player me = API->get_self();
+  Player opponent = API->get_opponent();
+  int opponent_strength = opponent._rock + opponent._paper + opponent._scissors;
+  int my_strength = me._rock + me._paper + me._scissors;
+  int opponent_health = opponent._health;
+  int my_health = me._health;
+  // ratio: how many rounds can we survive
+  double my_rounds = ((double)my_health) / ((double)opponent_strength);
+  double opponent_rounds = ((double)opponent_health)/((double)my_strength);
+  // ratio: how many more rounds can we survive than the opponent
+  double my_advantage = my_rounds / opponent_rounds;
+  // if we have no chance, return flag "-999.0"
+  if (my_advantage < 1)
+    return -999.0;
+  // calculate and return sigmoid function if there is a chance
+  double sigmoid = (exp(my_advantage)) / (exp(my_advantage) + 1); 
+  return sigmoid;
+}
 
 void log_monsters() {
   vector<Monster> monsters = API->get_all_monsters();
