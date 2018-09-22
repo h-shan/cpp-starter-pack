@@ -48,6 +48,14 @@ double get_advantage(){
   return sigmoid;
 }
 
+bool should_pursuit(){
+  if (get_advantage >= 0.5){
+    gameState.set_state(State.PURSUIT);
+    return true;
+  }
+  return false;
+}
+
 node_id_t pursuit(){
   if (SELF._location == OPPONENT._location){
         if (time_to_next_move(SELF) <= time_to_next_move(OPPONENT)){
