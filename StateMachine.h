@@ -3,11 +3,11 @@
 
 using namespace std;
 
-public enum State{
+enum State{
   STANDARD,
   HEALING,
   PURSUIT
-}
+};
 
 class StateMachine{
   public:
@@ -16,5 +16,5 @@ class StateMachine{
     void set_state(State setAs);
 
   private:
-    GameStateEngine _currentState;
-}
+    State _currentState;
+};

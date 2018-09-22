@@ -2,9 +2,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
-#include "Game_Api.h"
-#include "util.h"
-#include "strategy.h"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -12,6 +9,10 @@
 #include <math.h>
 #include <time.h>
 #include <map>
+
+#include "Game_Api.h"
+#include "util.h"
+#include "strategy.h"
 #include "StateMachine.h"
 
 using json = nlohmann::json;
@@ -28,6 +29,8 @@ Game_Api * API;
 Player SELF("", 0, 0, 0, 0, NULL);
 Player OPPONENT("", 0, 0, 0, 0, NULL);
 Monster CURRENT_TARGET_MONSTER;
+Monster NEXT_TARGET_MONSTER;
+StateMachine STATE_MACHINE;
 
 // return 0 if we have disadvantage, 0.5 - 1 based on sigmoid if we have advantage
 double get_advantage(){
@@ -49,7 +52,7 @@ double get_advantage(){
 }
 
 bool should_pursuit(){
-  if (get_advantage >= 0.5){
+  if (get_advantage() >= 0.5){
     return true;
   }
   return false;
@@ -67,7 +70,7 @@ node_id_t pursuit(){
     }
 	  return SELF._destination;
 	}
-  
+
   vector<vector<node_id_t>> paths = API->shortest_paths(SELF._location, OPPONENT._location);
   for (vector<node_id_t> path : paths) {
     if (path[0] == SELF._destination)
@@ -179,6 +182,7 @@ bool will_engage(node_id_t next) {
 }
 
 Monster get_closest_monster(bool not_current = false) {
+  fprintf(stderr, "get_closest_monster start\n");
   vector<Monster> closestMonsters = API->nearest_monsters(SELF._location, 0);
   vector<node_id_t> adjacent = API->get_adjacent_nodes(SELF._location);
   if (not_current) {
@@ -188,7 +192,8 @@ Monster get_closest_monster(bool not_current = false) {
         if (monster._location == SELF._location) {
           continue;
         }
-        if (!monster._dead || monster._respawn_counter <= time_to_target(SELF._location, monster._location)) {
+        if (!monster._dead || monster._respawn_counter <= time_to_target(monster._location)) {
+  fprintf(stderr, "get_closest_monster end\n");
           return monster;
         }
       }  
@@ -196,29 +201,30 @@ Monster get_closest_monster(bool not_current = false) {
   }
 
   for (Monster monster: closestMonsters) {
-    if (!monster._dead || monster._respawn_counter <= time_to_target(SELF._location, monster._location)) {
+    if (!monster._dead || monster._respawn_counter <= time_to_target(monster._location)) {
+  fprintf(stderr, "get_closest_monster end\n");
       return monster;
     }
   }
   closestMonsters = API->nearest_monsters(SELF._location, 1);
+  fprintf(stderr, "get_closest_monster end\n");
   return closestMonsters[rand() % closestMonsters.size()];
 }
 
 void update_game_state(){
   if (SELF._health < 50){
-    stateMachine.set_state(State.HEALING);
+    STATE_MACHINE.set_state(State::HEALING);
   }
   else if (should_pursuit()){
-    stateMachine.set_state(State.PURSUIT);
+    STATE_MACHINE.set_state(State::PURSUIT);
   }
   else {
-    stateMachine.set_state(State.STANDARD);
+    STATE_MACHINE.set_state(State::STANDARD);
   }
 }
 
 int main() {
   Strategy strategy;
-  StateMachine stateMachine;
   int my_player_num = 0;
   
   while(1){
@@ -234,9 +240,6 @@ int main() {
       SELF = API->get_self();
       OPPONENT = API->get_opponent();
       update_history(strategy);
-			 //YOUR CODE HERE
-      // vector <Monster> healthMonsters = get_health_monsters();
-      // Monster closestMon = get_closest(healthMonsters);
 
       bool find_next = false;
       if (CURRENT_TARGET_MONSTER._name != "") {
@@ -246,6 +249,7 @@ int main() {
           if (SELF._health < 50) {
             CURRENT_TARGET_MONSTER = API->nearest_monsters(SELF._location, "Health 0", 0)[0];
           } else {
+
             CURRENT_TARGET_MONSTER = get_closest_monster();
           }
         }
@@ -264,10 +268,11 @@ int main() {
       string stance = set_stance(target);
 
       if (find_next) {
-        if (self._destination != self._location) {
-          target = self._destination;
+        if (SELF._destination != SELF._location) {
+          target = SELF._destination;
         }
-        target = get_step_towards_monster(get_closest_monster(true));
+        NEXT_TARGET_MONSTER = get_closest_monster(true);
+        target = get_step_towards_monster(NEXT_TARGET_MONSTER);
       }
 
       if (will_engage(target)) {
